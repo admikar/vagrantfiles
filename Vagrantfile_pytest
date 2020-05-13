@@ -1,0 +1,58 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+hosts = {
+  "pytest" => "192.168.33.13"
+}
+
+$script = <<SCRIPT
+echo "I am provisioning..."
+echo "Provisioning virtual machine..."
+yum update -y
+yum group install "Development Tools" -y
+yum install epel-release git wget vim telnet nmap zip unzip gcc g++ -y
+yum whatprovides netstat
+yum install net-tools python-pip python34-setuptools python-devel pypy -y
+pip install --upgrade pip
+pip install speedtest-cli
+pip install virtualenv virtualenvwrapper
+pip install ipython[all]
+pip install --user numpy scipy matplotlib jupyter pandas sympy nose
+#wget https://hackage.haskell.org/package/pandoc-1.17.0.3/pandoc-1.17.0.3.tar.gz
+#tar xvzf pandoc-1.17.0.3.tar.gz
+#cd pandoc-1.17.0.3
+#curl -sSL https://get.haskellstack.org/ | sh
+#stack setup
+#stack install
+#sed -i '/$PATH/a PATH=$PATH:$HOME/.local/bin' ~/.bash_profile
+SCRIPT
+
+
+Vagrant.configure("2") do |config|
+  hosts.each do |name, ip|
+    config.vm.define name do |machine|
+      machine.vm.box = "centos/7"
+      machine.vm.hostname = "%s.example.org" % name
+      machine.vm.network :private_network, ip: ip
+      machine.vm.network :forwarded_port, guest: 8888, host: 8888, auto_correct: true
+      #machine.vm.network :forwarded_port, guest: 80, host: 80, auto_correct: true
+      machine.vm.network :forwarded_port, guest: 8000, host: 8000, auto_correct: true
+      machine.vm.synced_folder ".", "/vagrant"
+      #should enable symlink don't work
+      ##machine.vm.synced_folder ".", "/vagrant", type: "rsync", rsync__args: ["--copy-links", "--verbose", "--archive", "--delete", "-z"]
+      #should enable symlink don't work
+      ##config.vm.synced_folder File.readlink('SYMLINK'), "/mount/path"
+      machine.vm.provider "virtualbox" do |v|
+          v.name = name
+          v.customize ["modifyvm", :id, "--memory", 200]
+          #allow symlink
+          ##v.customize ["setextradata", :id, "VBoxInternal2/SharedFoldersEnableSymlinksCreate/v-root", "1"]
+      end
+      machine.vm.provision "shell" do |v|
+          v.inline = $script
+          #preserve_order: true
+      end
+
+    end
+  end
+end
