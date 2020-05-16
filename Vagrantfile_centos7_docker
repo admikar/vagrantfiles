@@ -68,6 +68,8 @@ Vagrant.configure("2") do |config|
   config.vm.provision "shell", inline: <<-SHELL
     #apt-get update
     sudo yum install -y yum-utils
+    sudo yum install -y util-linux
+    sudo yum install -y libcgroup-tools
     sudo yum-config-manager \
     --add-repo \
     https://download.docker.com/linux/centos/docker-ce.repo
